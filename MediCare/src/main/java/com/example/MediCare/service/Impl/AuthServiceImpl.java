@@ -1,6 +1,7 @@
 package com.example.MediCare.service.Impl;
 
 import com.example.MediCare.config.JwtProvider;
+import com.example.MediCare.domain.ImageType;
 import com.example.MediCare.exceptions.UserExceptions;
 import com.example.MediCare.mapper.UserMapper;
 import com.example.MediCare.model.User;
@@ -8,12 +9,14 @@ import com.example.MediCare.payload.dto.UserDto;
 import com.example.MediCare.payload.response.AuthResponse;
 import com.example.MediCare.repository.UserRepository;
 import com.example.MediCare.service.AuthService;
+import com.example.MediCare.service.FileStroageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 
@@ -24,6 +27,7 @@ public class AuthServiceImpl implements AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
+    private final FileStroageService fileStroageService;
     @Override
     public AuthResponse login(UserDto userDto) throws UserExceptions {
         User user = userRepository.findByEmail(userDto.getEmail())
@@ -32,6 +36,8 @@ public class AuthServiceImpl implements AuthService {
         if (!passwordEncoder.matches(userDto.getPassword(),user.getPassword())){
             throw new UserExceptions("Invalid password");
         }
+
+        user.setLastLogin(LocalDateTime.now());
 
         Authentication authentication = new UsernamePasswordAuthenticationToken(
                 user.getEmail(),
@@ -58,13 +64,25 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public UserDto updateAdminInfo(UserDto userDto,Long id) {
+    public UserDto updateAdminInfo(UserDto userDto, MultipartFile file,Long id) {
 
         User existingUser = userRepository.findById(id)
                 .orElseThrow(()-> new UserExceptions("User not found"));
 
         existingUser.setAddress(userDto.getAddress());
-        existingUser.setImage(userDto.getImage());
+        if (file != null && !file.isEmpty()) {
+            if (existingUser.getImage() != null) {
+                fileStroageService.deleteImage(existingUser.getImage());
+            }
+            String imagePath = fileStroageService.StoreImage(
+                    file,
+                    existingUser.getFullName(),
+                    ImageType.COMMON
+            );
+
+            existingUser.setImage(imagePath);
+        }
+
         existingUser.setUpdatedAt(LocalDateTime.now());
 
         User savedUser = userRepository.save(existingUser);
