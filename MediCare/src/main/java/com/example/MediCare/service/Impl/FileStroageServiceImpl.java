@@ -38,7 +38,7 @@ public class FileStroageServiceImpl implements FileStroageService {
                 .toLowerCase()
                 .replaceAll("[^a-z0-9]", "_");
 
-       String dateTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy:MM:dd_HH:mm:ss"));
+       String dateTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
 
         String originalName = file.getOriginalFilename();
         String extension = "";

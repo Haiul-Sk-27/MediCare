@@ -1,6 +1,5 @@
 package com.example.MediCare.config;
 
-import com.example.MediCare.config.JwtConstant;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -8,7 +7,6 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -26,15 +24,15 @@ public class JwtValidator extends OncePerRequestFilter {
     protected void doFilterInternal(
             HttpServletRequest request,
             HttpServletResponse response,
-            FilterChain filterChain) throws ServletException, IOException{
+            FilterChain filterChain) throws ServletException, IOException {
+
         String jwt = request.getHeader(JwtConstant.JWT_HEADER);
 
-        //Bearer jwt
+        // ✅ Check Bearer token properly
+        if (jwt != null && jwt.startsWith("Bearer ")) {
+            try {
+                jwt = jwt.substring(7);
 
-        if(jwt != null){
-            jwt = jwt.substring(7);
-
-            try{
                 SecretKey key = Keys.hmacShaKeyFor(JwtConstant.JWT_SECRET.getBytes());
 
                 Claims claims = Jwts.parserBuilder()
@@ -43,23 +41,31 @@ public class JwtValidator extends OncePerRequestFilter {
                         .parseClaimsJws(jwt)
                         .getBody();
 
-                String email = String.valueOf(claims.get("email"));
-                String authorities = String.valueOf(claims.get("authorities"));
+                String email = claims.get("email", String.class);
+                String authorities = claims.get("authorities", String.class);
 
-                List<GrantedAuthority> auths = AuthorityUtils.commaSeparatedStringToAuthorityList(
-                        authorities
-                );
-                Authentication auth = new UsernamePasswordAuthenticationToken(
-                        email,null,auths);
+                List<GrantedAuthority> auths =
+                        AuthorityUtils.commaSeparatedStringToAuthorityList(authorities);
 
-                SecurityContextHolder.getContext().setAuthentication(
-                        auth
+                Authentication authentication =
+                        new UsernamePasswordAuthenticationToken(email, null, auths);
+
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+
+            } catch (Exception e) {
+
+                // ✅ Return proper error response
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.setContentType("application/json");
+
+                response.getWriter().write(
+                        "{\"status\":401,\"error\":\"Invalid or Expired JWT Token\"}"
                 );
-            }catch (Exception e){
-                throw new BadCredentialsException("Invalid Jwt...");
+
+                return; // ❗ STOP filter chain
             }
         }
 
-        filterChain.doFilter(request,response);
+        filterChain.doFilter(request, response);
     }
 }

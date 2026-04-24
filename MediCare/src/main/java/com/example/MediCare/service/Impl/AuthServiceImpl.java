@@ -39,6 +39,7 @@ public class AuthServiceImpl implements AuthService {
 
         user.setLastLogin(LocalDateTime.now());
 
+        userRepository.save(user);
         Authentication authentication = new UsernamePasswordAuthenticationToken(
                 user.getEmail(),
                 null,

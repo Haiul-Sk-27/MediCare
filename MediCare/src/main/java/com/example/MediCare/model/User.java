@@ -1,6 +1,7 @@
 package com.example.MediCare.model;
 
 import com.example.MediCare.domain.UserRole;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -28,8 +29,11 @@ public class User {
     @Column(nullable = false)
     private UserRole role;
     @Column(nullable = false,updatable = false)
+    @JsonFormat(pattern = "MM-dd-yyyy HH:mm:ss")
     private LocalDateTime createdAt;
+    @JsonFormat(pattern = "MM-dd-yyyy HH:mm:ss")
     private LocalDateTime updatedAt;
+    @JsonFormat(pattern = "MM-dd-yyyy HH:mm:ss")
     private LocalDateTime lastLogin;
     private String image;
     private String address;
